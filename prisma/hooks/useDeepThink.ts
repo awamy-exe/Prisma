@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { getAI } from '../api';
+import { getAI, getAIProvider, findCustomModel } from '../api';
 import { getThinkingBudget } from '../config';
 import { AppConfig, ModelOption, ExpertResult, ChatMessage } from '../types';
 
@@ -99,9 +99,13 @@ export const useDeepThink = () => {
     setProcessStartTime(Date.now());
     setProcessEndTime(null);
     
+    const provider = getAIProvider(model);
+    const customModelConfig = findCustomModel(model, config.customModels);
+
     const ai = getAI({
-      apiKey: config.enableCustomApi ? config.customApiKey : undefined,
-      baseUrl: (config.enableCustomApi && config.customBaseUrl) ? config.customBaseUrl : undefined
+      provider,
+      apiKey: customModelConfig?.apiKey || config.customApiKey,
+      baseUrl: customModelConfig?.baseUrl || config.customBaseUrl
     });
 
     try {

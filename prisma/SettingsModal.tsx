@@ -3,6 +3,7 @@ import React from 'react';
 import { Settings, X } from 'lucide-react';
 import { AppConfig, ModelOption } from './types';
 import ApiSection from './components/settings/ApiSection';
+import ModelSection from './components/settings/ModelSection';
 import ThinkingSection from './components/settings/ThinkingSection';
 import GithubSection from './components/settings/GithubSection';
 
@@ -40,12 +41,13 @@ const SettingsModal = ({
         
         {/* Body */}
         <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
+          <ModelSection config={config} setConfig={setConfig} />
           <ApiSection config={config} setConfig={setConfig} />
-          
-          <ThinkingSection 
-            config={config} 
-            setConfig={setConfig} 
-            model={model} 
+
+          <ThinkingSection
+            config={config}
+            setConfig={setConfig}
+            model={model}
           />
 
           <GithubSection isOpen={isOpen} />

@@ -48,12 +48,13 @@ const App = () => {
         model={selectedModel}
       />
 
-      <Header 
+      <Header
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         onNewChat={handleNewChat}
+        config={config}
       />
 
       <div className="flex flex-1 overflow-hidden relative">

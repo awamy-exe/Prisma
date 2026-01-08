@@ -1,5 +1,14 @@
-export type ModelOption = 'gemini-3-flash-preview' | 'gemini-3-pro-preview';
+export type ModelOption = 'gemini-3-flash-preview' | 'gemini-3-pro-preview' | 'gpt-4.1' | 'gpt-4o' | 'gpt-4o-mini' | 'o1-preview' | 'o1-mini' | 'deepseek-chat' | 'deepseek-coder' | 'custom' | string;
 export type ThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
+export type ApiProvider = 'google' | 'openai' | 'deepseek' | 'anthropic' | 'xai' | 'mistral' | 'custom';
+
+export type CustomModel = {
+  id: string;
+  name: string;
+  provider: ApiProvider;
+  apiKey?: string;
+  baseUrl?: string;
+};
 
 export type ExpertConfig = {
   id: string;
@@ -40,7 +49,9 @@ export type AppConfig = {
   customApiKey?: string;
   customBaseUrl?: string;
   enableCustomApi?: boolean;
-  enableRecursiveLoop?: boolean; // New toggle for loop mode
+  enableRecursiveLoop?: boolean;
+  apiProvider?: ApiProvider;
+  customModels?: CustomModel[];
 };
 
 export type ChatMessage = {

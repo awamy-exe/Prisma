@@ -1,6 +1,11 @@
 import { ModelOption, ExpertResult } from '../../types';
 import { getExpertSystemInstruction } from './prompts';
 import { withRetry } from '../utils/retry';
+import { generateContentStream as generateOpenAIStream } from './openaiClient';
+
+const isGoogleProvider = (ai: any): boolean => {
+  return ai?.models?.generateContentStream !== undefined;
+};
 
 export const streamExpertResponse = async (
   ai: any,
@@ -11,44 +16,65 @@ export const streamExpertResponse = async (
   signal: AbortSignal,
   onChunk: (text: string, thought: string) => void
 ): Promise<void> => {
-  // We wrap the stream initiation in retry. 
-  // If the stream is successfully established but fails during iteration, 
-  // we catch that separately.
-  const streamResult = await withRetry(() => ai.models.generateContentStream({
-    model: model,
-    contents: expert.prompt,
-    config: {
-      systemInstruction: getExpertSystemInstruction(expert.role, expert.description, context),
-      temperature: expert.temperature,
-      thinkingConfig: { 
+  const isGoogle = isGoogleProvider(ai);
+
+  if (isGoogle) {
+    const streamResult = await withRetry(() => ai.models.generateContentStream({
+      model: model,
+      contents: expert.prompt,
+      config: {
+        systemInstruction: getExpertSystemInstruction(expert.role, expert.description, context),
+        temperature: expert.temperature,
+        thinkingConfig: {
           thinkingBudget: budget,
-          includeThoughts: true 
+          includeThoughts: true
+        }
       }
+    }));
+
+    try {
+      for await (const chunk of (streamResult as any)) {
+        if (signal.aborted) break;
+
+        let chunkText = "";
+        let chunkThought = "";
+
+        if (chunk.candidates?.[0]?.content?.parts) {
+          for (const part of chunk.candidates[0].content.parts) {
+            if (part.thought) {
+              chunkThought += (part.text || "");
+            } else if (part.text) {
+              chunkText += part.text;
+            }
+          }
+          onChunk(chunkText, chunkThought);
+        }
+      }
+    } catch (streamError) {
+      console.error(`Stream interrupted for expert ${expert.role}:`, streamError);
+      throw streamError;
     }
-  }));
+  } else {
+    const stream = generateOpenAIStream(ai, {
+      model,
+      systemInstruction: getExpertSystemInstruction(expert.role, expert.description, context),
+      content: expert.prompt,
+      temperature: expert.temperature,
+      thinkingConfig: {
+        thinkingBudget: budget,
+        includeThoughts: true
+      }
+    });
 
-  try {
-    for await (const chunk of streamResult) {
-       if (signal.aborted) break;
+    try {
+      for await (const chunk of (stream as any)) {
+        if (signal.aborted) break;
 
-       let chunkText = "";
-       let chunkThought = "";
-
-       if (chunk.candidates?.[0]?.content?.parts) {
-           for (const part of chunk.candidates[0].content.parts) {
-               if (part.thought) {
-                   chunkThought += (part.text || "");
-               } else if (part.text) {
-                   chunkText += part.text;
-               }
-           }
-           onChunk(chunkText, chunkThought);
-       }
+        onChunk(chunk.text, chunk.thought || '');
+      }
+    } catch (streamError) {
+      console.error(`Stream interrupted for expert ${expert.role}:`, streamError);
+      throw streamError;
     }
-  } catch (streamError) {
-    console.error(`Stream interrupted for expert ${expert.role}:`, streamError);
-    // We don't retry mid-stream automatically here to avoid complex state management,
-    // but the initial connection is protected by withRetry.
-    throw streamError;
   }
 };
