@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { ModelOption, AppConfig, ChatMessage } from '../types';
+import { ModelOption, AppConfig, ChatMessage, MessageAttachment } from '../types';
 import { STORAGE_KEYS, DEFAULT_CONFIG, getValidThinkingLevels } from '../config';
 import { useDeepThink } from './useDeepThink';
 import { useChatSessions } from './useChatSessions';
@@ -155,13 +155,14 @@ export const useAppLogic = () => {
     }
   }, [appState, finalOutput, managerAnalysis, experts, synthesisThoughts, resetDeepThink, processStartTime, processEndTime, currentSessionId, messages, selectedModel, createSession, updateSessionMessages]);
 
-  const handleRun = useCallback(() => {
-    if (!query.trim()) return;
+  const handleRun = useCallback((attachments: MessageAttachment[] = []) => {
+    if (!query.trim() && attachments.length === 0) return;
     
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: query
+      content: query,
+      attachments: attachments
     };
 
     const newMessages = [...messages, userMsg];
@@ -174,7 +175,7 @@ export const useAppLogic = () => {
       updateSessionMessages(activeSessionId, newMessages);
     }
 
-    runDynamicDeepThink(query, messages, selectedModel, config);
+    runDynamicDeepThink(query, newMessages, selectedModel, config);
     setQuery('');
   }, [query, messages, currentSessionId, selectedModel, config, createSession, updateSessionMessages, runDynamicDeepThink]);
 

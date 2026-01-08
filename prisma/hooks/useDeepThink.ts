@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { getAI, getAIProvider, findCustomModel } from '../api';
 import { getThinkingBudget } from '../config';
-import { AppConfig, ModelOption, ExpertResult, ChatMessage } from '../types';
+import { AppConfig, ModelOption, ExpertResult, ChatMessage, MessageAttachment } from '../types';
 
 import { executeManagerAnalysis, executeManagerReview } from '../services/deepThink/manager';
 import { streamExpertResponse } from '../services/deepThink/expert';
@@ -35,6 +35,7 @@ export const useDeepThink = () => {
     ai: any,
     model: ModelOption,
     context: string,
+    attachments: MessageAttachment[],
     budget: number,
     signal: AbortSignal
   ): Promise<ExpertResult> => {
@@ -52,6 +53,7 @@ export const useDeepThink = () => {
         model,
         expert,
         context,
+        attachments,
         budget,
         signal,
         (textChunk, thoughtChunk) => {
@@ -84,7 +86,7 @@ export const useDeepThink = () => {
     model: ModelOption, 
     config: AppConfig
   ) => {
-    if (!query.trim()) return;
+    if (!query.trim() && (!history.length || !history[history.length - 1].attachments?.length)) return;
 
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
@@ -109,7 +111,11 @@ export const useDeepThink = () => {
     });
 
     try {
-      const recentHistory = history.slice(-5).map(msg => 
+      // Get the last message (which is the user's current query) to retrieve attachments
+      const lastMessage = history[history.length - 1];
+      const currentAttachments = lastMessage.role === 'user' ? (lastMessage.attachments || []) : [];
+
+      const recentHistory = history.slice(0, -1).slice(-5).map(msg => 
         `${msg.role === 'user' ? 'User' : 'Model'}: ${msg.content}`
       ).join('\n');
 
@@ -119,7 +125,8 @@ export const useDeepThink = () => {
         ai, 
         model, 
         query, 
-        recentHistory, 
+        recentHistory,
+        currentAttachments,
         getThinkingBudget(config.planningLevel, model)
       );
 
@@ -135,8 +142,9 @@ export const useDeepThink = () => {
 
       setInitialExperts([primaryExpert]);
 
+      // Primary expert sees the images
       const primaryTask = runExpertLifecycle(
-        primaryExpert, 0, ai, model, recentHistory,
+        primaryExpert, 0, ai, model, recentHistory, currentAttachments,
         getThinkingBudget(config.expertLevel, model), signal
       );
 
@@ -154,8 +162,12 @@ export const useDeepThink = () => {
       appendExperts(round1Experts);
       setAppState('experts_working');
 
+      // Supplementary experts usually don't need the images unless specified, 
+      // but for simplicity/consistency we pass them if the model supports it.
+      // However, to save tokens/bandwidth, we might limit this.
+      // For now, let's pass them to ensure they have full context.
       const round1Tasks = round1Experts.map((exp, idx) => 
-        runExpertLifecycle(exp, idx + 1, ai, model, recentHistory,
+        runExpertLifecycle(exp, idx + 1, ai, model, recentHistory, currentAttachments,
            getThinkingBudget(config.expertLevel, model), signal)
       );
 
@@ -195,7 +207,7 @@ export const useDeepThink = () => {
              setAppState('experts_working');
 
              const nextRoundTasks = nextRoundExperts.map((exp, idx) => 
-                runExpertLifecycle(exp, startIndex + idx, ai, model, recentHistory,
+                runExpertLifecycle(exp, startIndex + idx, ai, model, recentHistory, currentAttachments,
                    getThinkingBudget(config.expertLevel, model), signal)
              );
 
@@ -213,6 +225,7 @@ export const useDeepThink = () => {
 
       await streamSynthesisResponse(
         ai, model, query, recentHistory, expertsDataRef.current,
+        currentAttachments,
         getThinkingBudget(config.synthesisLevel, model), signal,
         (textChunk, thoughtChunk) => {
             fullFinalText += textChunk;

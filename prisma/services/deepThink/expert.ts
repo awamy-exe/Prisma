@@ -1,4 +1,5 @@
-import { ModelOption, ExpertResult } from '../../types';
+
+import { ModelOption, ExpertResult, MessageAttachment } from '../../types';
 import { getExpertSystemInstruction } from './prompts';
 import { withRetry } from '../utils/retry';
 import { generateContentStream as generateOpenAIStream } from './openaiClient';
@@ -12,6 +13,7 @@ export const streamExpertResponse = async (
   model: ModelOption,
   expert: ExpertResult,
   context: string,
+  attachments: MessageAttachment[],
   budget: number,
   signal: AbortSignal,
   onChunk: (text: string, thought: string) => void
@@ -19,9 +21,25 @@ export const streamExpertResponse = async (
   const isGoogle = isGoogleProvider(ai);
 
   if (isGoogle) {
+    const contents: any = {
+      role: 'user',
+      parts: [{ text: expert.prompt }]
+    };
+
+    if (attachments.length > 0) {
+      attachments.forEach(att => {
+        contents.parts.push({
+          inlineData: {
+            mimeType: att.mimeType,
+            data: att.data
+          }
+        });
+      });
+    }
+
     const streamResult = await withRetry(() => ai.models.generateContentStream({
       model: model,
-      contents: expert.prompt,
+      contents: contents,
       config: {
         systemInstruction: getExpertSystemInstruction(expert.role, expert.description, context),
         temperature: expert.temperature,
@@ -55,10 +73,26 @@ export const streamExpertResponse = async (
       throw streamError;
     }
   } else {
+    let contentPayload: any = expert.prompt;
+
+    if (attachments.length > 0) {
+      contentPayload = [
+        { type: 'text', text: expert.prompt }
+      ];
+      attachments.forEach(att => {
+        contentPayload.push({
+          type: 'image_url',
+          image_url: {
+            url: `data:${att.mimeType};base64,${att.data}`
+          }
+        });
+      });
+    }
+
     const stream = generateOpenAIStream(ai, {
       model,
       systemInstruction: getExpertSystemInstruction(expert.role, expert.description, context),
-      content: expert.prompt,
+      content: contentPayload,
       temperature: expert.temperature,
       thinkingConfig: {
         thinkingBudget: budget,

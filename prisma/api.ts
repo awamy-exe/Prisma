@@ -32,7 +32,7 @@ let currentCustomApiUrl: string | null = null;
 const originalFetch = typeof window !== 'undefined' ? window.fetch.bind(window) : null;
 
 if (typeof window !== 'undefined' && originalFetch) {
-  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const proxyFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     let urlString: string;
     if (typeof input === 'string') {
       urlString = input;
@@ -56,11 +56,26 @@ if (typeof window !== 'undefined' && originalFetch) {
     
     return originalFetch(input, init);
   };
+
+  try {
+    window.fetch = proxyFetch;
+  } catch (e) {
+    try {
+      Object.defineProperty(window, 'fetch', {
+        value: proxyFetch,
+        writable: true,
+        configurable: true,
+        enumerable: true
+      });
+    } catch (e2) {
+      console.error('[API] Failed to intercept fetch:', e2);
+    }
+  }
 }
 
 export const getAI = (config?: AIProviderConfig) => {
   const provider = config?.provider || 'google';
-  const apiKey = config?.apiKey || (import.meta.env as any).VITE_API_KEY || process.env.API_KEY;
+  const apiKey = config?.apiKey || import.meta.env?.VITE_API_KEY || process.env.API_KEY;
 
   if (provider === 'openai' || provider === 'deepseek' || provider === 'custom' || provider === 'anthropic' || provider === 'xai' || provider === 'mistral') {
     const options: any = {

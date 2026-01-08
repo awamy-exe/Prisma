@@ -1,12 +1,13 @@
 
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { ArrowUp, Square } from 'lucide-react';
-import { AppState } from '../types';
+import { ArrowUp, Square, Paperclip, X, Image as ImageIcon } from 'lucide-react';
+import { AppState, MessageAttachment } from '../types';
+import { fileToBase64 } from '../utils';
 
 interface InputSectionProps {
   query: string;
   setQuery: (q: string) => void;
-  onRun: () => void;
+  onRun: (attachments: MessageAttachment[]) => void;
   onStop: () => void;
   appState: AppState;
   focusTrigger?: number;
@@ -14,7 +15,9 @@ interface InputSectionProps {
 
 const InputSection = ({ query, setQuery, onRun, onStop, appState, focusTrigger }: InputSectionProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isComposing, setIsComposing] = useState(false);
+  const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
 
   const adjustHeight = () => {
     if (textareaRef.current) {
@@ -36,8 +39,7 @@ const InputSection = ({ query, setQuery, onRun, onStop, appState, focusTrigger }
     }
   };
 
-  // Focus input on mount and when app becomes idle (e.g. after "New Chat" or completion)
-  // or when explicitly triggered by focusTrigger
+  // Focus input on mount and when app becomes idle
   useEffect(() => {
     if (appState === 'idle' && textareaRef.current) {
       textareaRef.current.focus();
@@ -49,39 +51,125 @@ const InputSection = ({ query, setQuery, onRun, onStop, appState, focusTrigger }
     adjustHeight();
   }, [query]);
 
+  const processFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    
+    try {
+      const base64 = await fileToBase64(file);
+      const newAttachment: MessageAttachment = {
+        id: Math.random().toString(36).substring(7),
+        type: 'image',
+        mimeType: file.type,
+        data: base64,
+        url: URL.createObjectURL(file)
+      };
+      setAttachments(prev => [...prev, newAttachment]);
+    } catch (e) {
+      console.error("Failed to process file", e);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          processFile(file);
+        }
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      Array.from(e.target.files).forEach(processFile);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // If user presses Enter without Shift
     if (e.key === 'Enter' && !e.shiftKey) {
-      // robust check for IME composition (e.g. Chinese/Japanese inputs)
       if (isComposing || (e.nativeEvent as any).isComposing) {
         return;
       }
-      
       e.preventDefault();
-      if (query.trim() && appState === 'idle') {
-        onRun();
+      if ((query.trim() || attachments.length > 0) && appState === 'idle') {
+        handleSubmit();
       }
     }
+  };
+
+  const handleSubmit = () => {
+    if (!query.trim() && attachments.length === 0) return;
+    onRun(attachments);
+    setAttachments([]);
   };
 
   const isRunning = appState !== 'idle';
 
   return (
     <div className="w-full">
-      {/* Container: Flex items-end ensures button stays at bottom right as text grows */}
+      {/* Attachments Preview */}
+      {attachments.length > 0 && (
+        <div className="flex gap-2 mb-2 overflow-x-auto px-1 py-1">
+          {attachments.map(att => (
+            <div key={att.id} className="relative group shrink-0">
+              <img 
+                src={att.url} 
+                alt="attachment" 
+                className="h-16 w-16 object-cover rounded-lg border border-slate-200 shadow-sm"
+              />
+              <button
+                onClick={() => removeAttachment(att.id)}
+                className="absolute -top-1.5 -right-1.5 bg-slate-900 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Input Container */}
       <div className="w-full flex items-end p-2 bg-white/70 backdrop-blur-xl border border-slate-200/50 rounded-[26px] shadow-2xl focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:bg-white/90 transition-colors duration-200">
         
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          className="hidden" 
+          accept="image/*" 
+          multiple
+          onChange={handleFileSelect}
+        />
+
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex-shrink-0 p-2.5 mb-0.5 ml-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          title="Attach Image"
+          disabled={isRunning}
+        >
+          <Paperclip size={20} />
+        </button>
+
         <textarea
           ref={textareaRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
           placeholder="Ask a complex question..."
           rows={1}
           autoFocus
-          className="flex-1 max-h-[200px] py-3 pl-4 pr-2 bg-transparent border-none focus:ring-0 resize-none outline-none text-slate-800 placeholder:text-slate-400 leading-relaxed custom-scrollbar text-base"
+          className="flex-1 max-h-[200px] py-3 pl-2 pr-2 bg-transparent border-none focus:ring-0 resize-none outline-none text-slate-800 placeholder:text-slate-400 leading-relaxed custom-scrollbar text-base"
           style={{ minHeight: '48px' }}
         />
 
@@ -95,10 +183,8 @@ const InputSection = ({ query, setQuery, onRun, onStop, appState, focusTrigger }
             </button>
           ) : (
             <button
-              onClick={() => {
-                 if (query.trim()) onRun();
-              }}
-              disabled={!query.trim()}
+              onClick={handleSubmit}
+              disabled={!query.trim() && attachments.length === 0}
               className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-md hover:scale-105 active:scale-95"
             >
               <ArrowUp size={20} />

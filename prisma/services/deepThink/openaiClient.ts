@@ -1,3 +1,4 @@
+
 import OpenAI from "openai";
 import { ModelOption } from '../../types';
 import { withRetry } from '../utils/retry';
@@ -10,7 +11,7 @@ export interface OpenAIStreamChunk {
 export interface OpenAIConfig {
   model: ModelOption;
   systemInstruction?: string;
-  content: string;
+  content: string | Array<any>;
   temperature?: number;
   responseFormat?: 'text' | 'json_object';
   thinkingConfig?: {
@@ -49,7 +50,7 @@ export const generateContent = async (
 
   messages.push({
     role: 'user',
-    content: config.content
+    content: config.content as any
   });
 
   const requestOptions: any = {
@@ -93,7 +94,7 @@ export async function* generateContentStream(
 
   messages.push({
     role: 'user',
-    content: config.content
+    content: config.content as any
   });
 
   const requestOptions: any = {

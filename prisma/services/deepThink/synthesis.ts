@@ -1,4 +1,5 @@
-import { ModelOption, ExpertResult } from '../../types';
+
+import { ModelOption, ExpertResult, MessageAttachment } from '../../types';
 import { getSynthesisPrompt } from './prompts';
 import { withRetry } from '../utils/retry';
 import { generateContentStream as generateOpenAIStream } from './openaiClient';
@@ -13,6 +14,7 @@ export const streamSynthesisResponse = async (
   query: string,
   historyContext: string,
   expertResults: ExpertResult[],
+  attachments: MessageAttachment[],
   budget: number,
   signal: AbortSignal,
   onChunk: (text: string, thought: string) => void
@@ -21,9 +23,25 @@ export const streamSynthesisResponse = async (
   const isGoogle = isGoogleProvider(ai);
 
   if (isGoogle) {
+    const contents: any = {
+      role: 'user',
+      parts: [{ text: prompt }]
+    };
+
+    if (attachments.length > 0) {
+      attachments.forEach(att => {
+        contents.parts.push({
+          inlineData: {
+            mimeType: att.mimeType,
+            data: att.data
+          }
+        });
+      });
+    }
+
     const synthesisStream = await withRetry(() => ai.models.generateContentStream({
       model: model,
-      contents: prompt,
+      contents: contents,
       config: {
         thinkingConfig: {
           thinkingBudget: budget,
@@ -55,10 +73,26 @@ export const streamSynthesisResponse = async (
       throw streamError;
     }
   } else {
+    let contentPayload: any = prompt;
+
+    if (attachments.length > 0) {
+      contentPayload = [
+        { type: 'text', text: prompt }
+      ];
+      attachments.forEach(att => {
+        contentPayload.push({
+          type: 'image_url',
+          image_url: {
+            url: `data:${att.mimeType};base64,${att.data}`
+          }
+        });
+      });
+    }
+
     const stream = generateOpenAIStream(ai, {
       model,
       systemInstruction: undefined,
-      content: prompt,
+      content: contentPayload,
       temperature: 0.7,
       thinkingConfig: {
         thinkingBudget: budget,

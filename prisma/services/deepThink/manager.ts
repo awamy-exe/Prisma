@@ -1,10 +1,10 @@
+
 import { Type } from "@google/genai";
-import { ModelOption, AnalysisResult, ExpertResult, ReviewResult, ApiProvider } from '../../types';
+import { ModelOption, AnalysisResult, ExpertResult, ReviewResult, MessageAttachment } from '../../types';
 import { cleanJsonString } from '../../utils';
 import { MANAGER_SYSTEM_PROMPT, MANAGER_REVIEW_SYSTEM_PROMPT } from './prompts';
 import { withRetry } from '../utils/retry';
 import { generateContent as generateOpenAIContent } from './openaiClient';
-import { getAIProvider } from '../../api';
 
 const isGoogleProvider = (ai: any): boolean => {
   return ai?.models?.generateContent !== undefined;
@@ -15,9 +15,11 @@ export const executeManagerAnalysis = async (
   model: ModelOption,
   query: string,
   context: string,
+  attachments: MessageAttachment[],
   budget: number
 ): Promise<AnalysisResult> => {
   const isGoogle = isGoogleProvider(ai);
+  const textPrompt = `Context:\n${context}\n\nCurrent Query: "${query}"`;
 
   if (isGoogle) {
     const managerSchema = {
@@ -41,10 +43,26 @@ export const executeManagerAnalysis = async (
       required: ["thought_process", "experts"]
     };
 
+    const contents: any = {
+      role: 'user',
+      parts: [{ text: textPrompt }]
+    };
+
+    if (attachments.length > 0) {
+      attachments.forEach(att => {
+        contents.parts.push({
+          inlineData: {
+            mimeType: att.mimeType,
+            data: att.data
+          }
+        });
+      });
+    }
+
     try {
       const analysisResp = await withRetry(() => ai.models.generateContent({
         model: model,
-        contents: `Context:\n${context}\n\nCurrent Query: "${query}"`,
+        contents: contents,
         config: {
           systemInstruction: MANAGER_SYSTEM_PROMPT,
           responseMimeType: "application/json",
@@ -73,10 +91,37 @@ export const executeManagerAnalysis = async (
     }
   } else {
     try {
+      let contentPayload: any = textPrompt;
+
+      if (attachments.length > 0) {
+        contentPayload = [
+          { type: 'text', text: textPrompt }
+        ];
+        attachments.forEach(att => {
+          contentPayload.push({
+            type: 'image_url',
+            image_url: {
+              url: `data:${att.mimeType};base64,${att.data}`
+            }
+          });
+        });
+      }
+
+      // Append formatting instruction to prompt if needed (OpenAI sometimes needs this explicit in text)
+      // but usually responseFormat: json_object + system prompt is enough.
+      // We append it to the text part or the string.
+      const jsonInstruction = `\n\nReturn a JSON response with this structure:\n{\n  "thought_process": "...",\n  "experts": [\n    { "role": "...", "description": "...", "temperature": number, "prompt": "..." }\n  ]\n}`;
+      
+      if (Array.isArray(contentPayload)) {
+         contentPayload[0].text += jsonInstruction;
+      } else {
+         contentPayload += jsonInstruction;
+      }
+
       const response = await generateOpenAIContent(ai, {
         model,
         systemInstruction: MANAGER_SYSTEM_PROMPT,
-        content: `Context:\n${context}\n\nCurrent Query: "${query}"\n\nReturn a JSON response with this structure:\n{\n  "thought_process": "...",\n  "experts": [\n    { "role": "...", "description": "...", "temperature": number, "prompt": "..." }\n  ]\n}`,
+        content: contentPayload,
         temperature: 0.7,
         responseFormat: 'json_object',
         thinkingConfig: {

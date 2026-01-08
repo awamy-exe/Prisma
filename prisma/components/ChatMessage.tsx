@@ -102,6 +102,21 @@ const ChatMessageItem = ({ message, isLast }: ChatMessageProps) => {
             </div>
           )}
 
+          {/* Attachments */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {message.attachments.map(att => (
+                 <img 
+                   key={att.id} 
+                   src={att.url || `data:${att.mimeType};base64,${att.data}`}
+                   alt="attachment" 
+                   className="h-32 w-32 object-cover rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
+                   onClick={() => window.open(att.url || `data:${att.mimeType};base64,${att.data}`, '_blank')}
+                 />
+              ))}
+            </div>
+          )}
+
           {/* Text Content */}
           <div className="prose prose-slate max-w-none prose-p:leading-7 prose-pre:bg-slate-900 prose-pre:text-slate-50">
             {message.content ? (

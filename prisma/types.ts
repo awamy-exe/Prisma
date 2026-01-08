@@ -1,4 +1,5 @@
-export type ModelOption = 'gemini-3-flash-preview' | 'gemini-3-pro-preview' | 'gpt-4.1' | 'gpt-4o' | 'gpt-4o-mini' | 'o1-preview' | 'o1-mini' | 'deepseek-chat' | 'deepseek-coder' | 'custom' | string;
+
+export type ModelOption = 'gemini-3-flash-preview' | 'gemini-3-pro-preview' | 'custom' | string;
 export type ThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
 export type ApiProvider = 'google' | 'openai' | 'deepseek' | 'anthropic' | 'xai' | 'mistral' | 'custom';
 
@@ -54,10 +55,19 @@ export type AppConfig = {
   customModels?: CustomModel[];
 };
 
+export type MessageAttachment = {
+  id: string;
+  type: 'image';
+  mimeType: string;
+  data: string; // Base64 string
+  url?: string; // For display
+};
+
 export type ChatMessage = {
   id: string;
   role: 'user' | 'model';
   content: string;
+  attachments?: MessageAttachment[];
   // DeepThink Artifacts (only for model messages)
   analysis?: AnalysisResult | null;
   experts?: ExpertResult[];
