@@ -65,7 +65,15 @@ export const generateContent = async (
 
   try {
     const response = await withRetry(() => ai.chat.completions.create(requestOptions));
-    const content = response.choices[0]?.message?.content || '';
+    const message = response.choices[0]?.message;
+    const content = message?.content || '';
+    
+    // Check for DeepSeek native reasoning field
+    const reasoningContent = (message as any)?.reasoning_content;
+
+    if (reasoningContent && config.thinkingConfig?.includeThoughts) {
+      return { text: content, thought: reasoningContent };
+    }
 
     if (config.thinkingConfig?.includeThoughts) {
       const { thought, text } = parseThinkingTokens(content);
@@ -112,6 +120,13 @@ export async function* generateContentStream(
 
   for await (const chunk of (stream as any)) {
     const delta = chunk.choices[0]?.delta?.content || '';
+    // Support DeepSeek native reasoning field
+    const reasoningDelta = (chunk.choices[0]?.delta as any)?.reasoning_content || '';
+
+    // If we have native reasoning content, yield it immediately as thought
+    if (reasoningDelta) {
+      yield { text: '', thought: reasoningDelta };
+    }
 
     if (!delta) continue;
 

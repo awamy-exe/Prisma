@@ -15,6 +15,12 @@ export const MODELS: { value: ModelOption; label: string; desc: string; provider
     provider: 'google'
   },
   {
+    value: 'deepseek-reasoner',
+    label: 'DeepSeek R1',
+    desc: 'State-of-the-art open reasoning model.',
+    provider: 'deepseek'
+  },
+  {
     value: 'custom',
     label: 'Custom Model',
     desc: 'Use any OpenAI-compatible API (LM Studio, Ollama, LocalAI, etc.) by configuring custom base URL.',
