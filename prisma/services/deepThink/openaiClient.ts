@@ -56,7 +56,8 @@ export const generateContent = async (
   const requestOptions: any = {
     model: config.model,
     messages,
-    temperature: config.temperature,
+    // Clamp temperature to 1.0 max for compatibility with strict providers (NVIDIA, vLLM, etc.)
+    temperature: typeof config.temperature === 'number' ? Math.min(config.temperature, 1.0) : undefined,
   };
 
   if (config.responseFormat === 'json_object') {
@@ -68,11 +69,11 @@ export const generateContent = async (
     const message = response.choices[0]?.message;
     const content = message?.content || '';
     
-    // Check for DeepSeek native reasoning field
+    // Check for native reasoning_content field (DeepSeek/NVIDIA style)
     const reasoningContent = (message as any)?.reasoning_content;
 
     if (reasoningContent && config.thinkingConfig?.includeThoughts) {
-      return { text: content, thought: reasoningContent };
+       return { text: content, thought: reasoningContent };
     }
 
     if (config.thinkingConfig?.includeThoughts) {
@@ -108,7 +109,8 @@ export async function* generateContentStream(
   const requestOptions: any = {
     model: config.model,
     messages,
-    temperature: config.temperature,
+    // Clamp temperature to 1.0 max for compatibility with strict providers
+    temperature: typeof config.temperature === 'number' ? Math.min(config.temperature, 1.0) : undefined,
     stream: true,
   };
 
@@ -119,51 +121,56 @@ export async function* generateContentStream(
   let currentThought = '';
 
   for await (const chunk of (stream as any)) {
-    const delta = chunk.choices[0]?.delta?.content || '';
-    // Support DeepSeek native reasoning field
-    const reasoningDelta = (chunk.choices[0]?.delta as any)?.reasoning_content || '';
-
-    // If we have native reasoning content, yield it immediately as thought
-    if (reasoningDelta) {
-      yield { text: '', thought: reasoningDelta };
-    }
-
+    const delta = chunk.choices[0]?.delta;
     if (!delta) continue;
 
-    accumulatedText += delta;
+    const content = delta.content || '';
+    // Check for native reasoning_content field (DeepSeek/NVIDIA style)
+    const reasoning = delta.reasoning_content || '';
 
-    if (config.thinkingConfig?.includeThoughts) {
-      if (delta.includes('<thinking>')) {
-        inThinking = true;
-        continue;
-      }
+    // If native reasoning field exists, emit it immediately
+    if (reasoning && config.thinkingConfig?.includeThoughts) {
+      yield { text: '', thought: reasoning };
+    }
 
-      if (inThinking) {
-        if (delta.includes('</thinking>')) {
-          inThinking = false;
-          const parts = delta.split('</thinking>', 2);
-          currentThought += parts[0];
+    if (content) {
+      accumulatedText += content;
 
-          if (currentThought.trim()) {
-            yield { text: '', thought: currentThought };
-            currentThought = '';
-          }
+      if (config.thinkingConfig?.includeThoughts) {
+        // Fallback to tag parsing if reasoning_content wasn't provided but tags exist
+        if (content.includes('<thinking>')) {
+          inThinking = true;
+          continue;
+        }
 
-          if (parts[1]) {
-            yield { text: parts[1], thought: '' };
+        if (inThinking) {
+          if (content.includes('</thinking>')) {
+            inThinking = false;
+            const parts = content.split('</thinking>', 2);
+            currentThought += parts[0];
+
+            if (currentThought.trim()) {
+              yield { text: '', thought: currentThought };
+              currentThought = '';
+            }
+
+            if (parts[1]) {
+              yield { text: parts[1], thought: '' };
+            }
+          } else {
+            currentThought += content;
+            // Emit thought chunks periodically so it doesn't hang
+            if (currentThought.length > 50) {
+              yield { text: '', thought: currentThought };
+              currentThought = '';
+            }
           }
         } else {
-          currentThought += delta;
-          if (currentThought.length > 100) {
-            yield { text: '', thought: currentThought };
-            currentThought = '';
-          }
+          yield { text: content, thought: '' };
         }
       } else {
-        yield { text: delta, thought: '' };
+        yield { text: content, thought: '' };
       }
-    } else {
-      yield { text: delta, thought: '' };
     }
   }
 
